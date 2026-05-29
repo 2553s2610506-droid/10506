@@ -1,16 +1,17 @@
+# realistic_bass_fretboard_streamlit_app
+
+## app.py
+
+```python
 import streamlit as st
 
-# =========================
-# 페이지 설정
-# =========================
-
 st.set_page_config(
-    page_title="Bass Chord Tone Finder",
+    page_title="Bass Fretboard",
     layout="wide"
 )
 
 # =========================
-# 음악 이론 데이터
+# 음악 데이터
 # =========================
 
 NOTES = [
@@ -18,7 +19,7 @@ NOTES = [
     "F", "F#", "G", "G#", "A", "A#", "B"
 ]
 
-CHORD_TYPES = {
+CHORDS = {
     "maj": [0, 4, 7],
     "min": [0, 3, 7],
     "7": [0, 4, 7, 10],
@@ -26,35 +27,35 @@ CHORD_TYPES = {
     "m7": [0, 3, 7, 10]
 }
 
-# 베이스 튜닝 (위에서 아래)
-TUNING = ["G", "D", "A", "E"]
+TUNING = ["E", "A", "D", "G"]
 
 
 # =========================
 # 함수
 # =========================
 
-def get_note_index(note):
+
+def note_index(note):
     return NOTES.index(note)
+
 
 
 def build_chord(root, chord_type):
 
-    root_index = get_note_index(root)
+    root_idx = note_index(root)
 
-    intervals = CHORD_TYPES[chord_type]
+    intervals = CHORDS[chord_type]
 
-    chord_notes = []
+    result = []
 
     for interval in intervals:
 
-        note_index = (root_index + interval) % 12
+        idx = (root_idx + interval) % 12
 
-        chord_notes.append(
-            NOTES[note_index]
-        )
+        result.append(NOTES[idx])
 
-    return chord_notes
+    return result
+
 
 
 def generate_fretboard(max_fret=12):
@@ -63,19 +64,17 @@ def generate_fretboard(max_fret=12):
 
     for string_note in TUNING:
 
-        string_notes = []
+        row = []
 
-        start_index = get_note_index(string_note)
+        start_idx = note_index(string_note)
 
         for fret in range(max_fret + 1):
 
-            note = NOTES[
-                (start_index + fret) % 12
-            ]
+            note = NOTES[(start_idx + fret) % 12]
 
-            string_notes.append(note)
+            row.append(note)
 
-        fretboard.append(string_notes)
+        fretboard.append(row)
 
     return fretboard
 
@@ -84,7 +83,7 @@ def generate_fretboard(max_fret=12):
 # UI
 # =========================
 
-st.title("🎸 Bass Chord Tone Finder")
+st.title("🎸 Bass Fretboard Visualizer")
 
 col1, col2 = st.columns(2)
 
@@ -99,68 +98,169 @@ with col2:
 
     chord_type = st.selectbox(
         "Chord Type",
-        list(CHORD_TYPES.keys())
+        list(CHORDS.keys())
     )
 
-# =========================
-# 코드 계산
-# =========================
 
-chord_notes = build_chord(
-    root,
-    chord_type
-)
+chord_notes = build_chord(root, chord_type)
 
-st.subheader(
-    f"{root}{chord_type}"
-)
-
-st.write(
-    "Chord Notes:"
-)
-
-st.success(
-    " • ".join(chord_notes)
-)
-
-# =========================
-# 지판 출력
-# =========================
-
-st.subheader("Fretboard")
+st.success(f"Chord Notes: {' • '.join(chord_notes)}")
 
 fretboard = generate_fretboard()
 
-# 프렛 헤더
-header = "| STRING |"
+
+# =========================
+# CSS
+# =========================
+
+st.markdown(
+    """
+    <style>
+
+    .fretboard {
+        background: linear-gradient(
+            to bottom,
+            #5c3b1e,
+            #3b2412
+        );
+
+        padding: 40px;
+
+        border-radius: 20px;
+
+        overflow-x: auto;
+
+        border: 4px solid #222;
+    }
+
+    .string-row {
+        display: flex;
+        align-items: center;
+        margin: 26px 0;
+        position: relative;
+    }
+
+    .string-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: silver;
+        z-index: 1;
+    }
+
+    .fret {
+        width: 72px;
+        height: 60px;
+
+        border-right: 3px solid #cfcfcf;
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        position: relative;
+
+        z-index: 2;
+    }
+
+    .note {
+        width: 42px;
+        height: 42px;
+
+        border-radius: 50%;
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        font-weight: bold;
+
+        color: white;
+
+        background: #3498db;
+
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+
+    .root {
+        background: #e74c3c;
+    }
+
+    .empty {
+        width: 42px;
+        height: 42px;
+    }
+
+    .fret-numbers {
+        display: flex;
+        margin-left: 30px;
+        margin-bottom: 15px;
+        color: white;
+        font-weight: bold;
+    }
+
+    .fret-number {
+        width: 72px;
+        text-align: center;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# =========================
+# 프렛 번호
+# =========================
+
+fret_numbers_html = "<div class='fret-numbers'>"
 
 for fret in range(13):
-    header += f" {fret:^6} |"
+    fret_numbers_html += f"<div class='fret-number'>{fret}</div>"
 
-st.markdown(f"```{header}```")
+fret_numbers_html += "</div>"
 
-# 각 줄 출력
-for string_index, string_notes in enumerate(fretboard):
 
-    line = f"|   {TUNING[string_index]}    |"
+# =========================
+# 지판 생성
+# =========================
+
+html = "<div class='fretboard'>"
+
+html += fret_numbers_html
+
+for string_notes in fretboard:
+
+    html += "<div class='string-row'>"
+
+    html += "<div class='string-line'></div>"
 
     for note in string_notes:
 
-        # 루트음
+        html += "<div class='fret'>"
+
         if note == root:
-            display = f"[{note}]"
 
-        # 코드톤
+            html += f"<div class='note root'>{note}</div>"
+
         elif note in chord_notes:
-            display = f" {note} "
 
-        # 기타 음
+            html += f"<div class='note'>{note}</div>"
+
         else:
-            display = " -- "
 
-        line += f" {display:^6} |"
+            html += "<div class='empty'></div>"
 
-    st.markdown(f"```{line}```")
+        html += "</div>"
+
+    html += "</div>"
+
+html += "</div>"
+
+st.markdown(html, unsafe_allow_html=True)
+
 
 # =========================
 # 설명
@@ -168,8 +268,38 @@ for string_index, string_notes in enumerate(fretboard):
 
 st.info(
     """
-    [Root] = 루트음  
-    일반 음 = 코드톤  
-    -- = 코드에 포함되지 않는 음
+    🔴 빨간색 = 루트음
+
+    🔵 파란색 = 코드톤
     """
 )
+```
+
+---
+
+## requirements.txt
+
+```txt
+streamlit
+```
+
+---
+
+## 실행 방법
+
+```bash
+streamlit run app.py
+```
+
+---
+
+## 특징
+
+* 실제 베이스 지판 느낌
+* 나무 색상 지판
+* 금속 줄 표현
+* 프렛 라인 구현
+* 원형 코드톤 표시
+* 루트음 빨간색 강조
+* Streamlit 기본만 사용
+* 외부 라이브러리 필요 없음
