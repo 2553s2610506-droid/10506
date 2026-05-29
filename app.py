@@ -1,9 +1,8 @@
-# realistic_bass_fretboard_streamlit_app
-
-## app.py
-
-```python
 import streamlit as st
+
+# =========================
+# 페이지 설정
+# =========================
 
 st.set_page_config(
     page_title="Bass Fretboard",
@@ -27,17 +26,15 @@ CHORDS = {
     "m7": [0, 3, 7, 10]
 }
 
+# 베이스 튜닝 (아래줄 → 위줄)
 TUNING = ["E", "A", "D", "G"]
-
 
 # =========================
 # 함수
 # =========================
 
-
 def note_index(note):
     return NOTES.index(note)
-
 
 
 def build_chord(root, chord_type):
@@ -55,7 +52,6 @@ def build_chord(root, chord_type):
         result.append(NOTES[idx])
 
     return result
-
 
 
 def generate_fretboard(max_fret=12):
@@ -101,16 +97,16 @@ with col2:
         list(CHORDS.keys())
     )
 
-
 chord_notes = build_chord(root, chord_type)
 
-st.success(f"Chord Notes: {' • '.join(chord_notes)}")
+st.success(
+    f"Chord Notes: {' • '.join(chord_notes)}"
+)
 
 fretboard = generate_fretboard()
 
-
 # =========================
-# CSS
+# CSS 스타일
 # =========================
 
 st.markdown(
@@ -210,7 +206,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 # =========================
 # 프렛 번호
 # =========================
@@ -218,20 +213,23 @@ st.markdown(
 fret_numbers_html = "<div class='fret-numbers'>"
 
 for fret in range(13):
-    fret_numbers_html += f"<div class='fret-number'>{fret}</div>"
+
+    fret_numbers_html += (
+        f"<div class='fret-number'>{fret}</div>"
+    )
 
 fret_numbers_html += "</div>"
 
-
 # =========================
-# 지판 생성
+# 지판 HTML 생성
 # =========================
 
 html = "<div class='fretboard'>"
 
 html += fret_numbers_html
 
-for string_notes in fretboard:
+# 화면에는 G현이 위로 오게 reverse
+for string_notes in reversed(fretboard):
 
     html += "<div class='string-row'>"
 
@@ -243,11 +241,15 @@ for string_notes in fretboard:
 
         if note == root:
 
-            html += f"<div class='note root'>{note}</div>"
+            html += (
+                f"<div class='note root'>{note}</div>"
+            )
 
         elif note in chord_notes:
 
-            html += f"<div class='note'>{note}</div>"
+            html += (
+                f"<div class='note'>{note}</div>"
+            )
 
         else:
 
@@ -259,8 +261,10 @@ for string_notes in fretboard:
 
 html += "</div>"
 
-st.markdown(html, unsafe_allow_html=True)
-
+st.markdown(
+    html,
+    unsafe_allow_html=True
+)
 
 # =========================
 # 설명
@@ -268,38 +272,8 @@ st.markdown(html, unsafe_allow_html=True)
 
 st.info(
     """
-    🔴 빨간색 = 루트음
+🔴 빨간색 = 루트음
 
-    🔵 파란색 = 코드톤
-    """
+🔵 파란색 = 코드톤
+"""
 )
-```
-
----
-
-## requirements.txt
-
-```txt
-streamlit
-```
-
----
-
-## 실행 방법
-
-```bash
-streamlit run app.py
-```
-
----
-
-## 특징
-
-* 실제 베이스 지판 느낌
-* 나무 색상 지판
-* 금속 줄 표현
-* 프렛 라인 구현
-* 원형 코드톤 표시
-* 루트음 빨간색 강조
-* Streamlit 기본만 사용
-* 외부 라이브러리 필요 없음
