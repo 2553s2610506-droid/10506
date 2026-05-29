@@ -1,5 +1,7 @@
+# app.py
+
 import streamlit as st
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 # =========================
 # 음악 이론
@@ -21,12 +23,18 @@ CHORD_FORMULAS = {
 TUNING = ["E", "A", "D", "G"]
 
 
+# =========================
+# 코드 계산
+# =========================
+
 def get_note_index(note):
     return NOTES.index(note)
 
 
 def build_chord(root, chord_type):
+
     root_index = get_note_index(root)
+
     intervals = CHORD_FORMULAS[chord_type]
 
     chord_notes = []
@@ -43,15 +51,19 @@ def build_chord(root, chord_type):
 # =========================
 
 def generate_fretboard(max_fret=12):
+
     fretboard = []
 
     for string_note in TUNING:
+
         string_notes = []
 
         start_index = get_note_index(string_note)
 
         for fret in range(max_fret + 1):
+
             note = NOTES[(start_index + fret) % 12]
+
             string_notes.append(note)
 
         fretboard.append(string_notes)
@@ -60,25 +72,36 @@ def generate_fretboard(max_fret=12):
 
 
 # =========================
-# 지판 그리기
+# Plotly 지판 그리기
 # =========================
 
 def draw_fretboard(chord_notes, root_note):
 
     fretboard = generate_fretboard()
 
-    fig, ax = plt.subplots(figsize=(14, 4))
+    fig = go.Figure()
 
-    num_strings = 4
-    num_frets = 12
+    # 줄 그리기
+    for string in range(4):
+        fig.add_shape(
+            type="line",
+            x0=0,
+            y0=string,
+            x1=12,
+            y1=string,
+            line=dict(width=4)
+        )
 
-    # 줄
-    for string in range(num_strings):
-        ax.plot([0, num_frets], [string, string], linewidth=2)
-
-    # 프렛
-    for fret in range(num_frets + 1):
-        ax.plot([fret, fret], [0, num_strings - 1], linewidth=1)
+    # 프렛 그리기
+    for fret in range(13):
+        fig.add_shape(
+            type="line",
+            x0=fret,
+            y0=0,
+            x1=fret,
+            y1=3,
+            line=dict(width=2)
+        )
 
     # 음 표시
     for string_idx, string_notes in enumerate(fretboard):
@@ -87,39 +110,40 @@ def draw_fretboard(chord_notes, root_note):
 
             if note in chord_notes:
 
-                color = "red" if note == root_note else "skyblue"
+                color = "red" if note == root_note else "lightblue"
 
-                ax.scatter(
-                    fret_idx,
-                    string_idx,
-                    s=500,
-                    color=color
+                fig.add_trace(
+                    go.Scatter(
+                        x=[fret_idx],
+                        y=[string_idx],
+                        mode="markers+text",
+                        marker=dict(
+                            size=28,
+                            color=color
+                        ),
+                        text=[note],
+                        textposition="middle center",
+                        showlegend=False
+                    )
                 )
 
-                ax.text(
-                    fret_idx,
-                    string_idx,
-                    note,
-                    ha="center",
-                    va="center",
-                    fontsize=10,
-                    fontweight="bold"
-                )
-
-    # 꾸미기
-    ax.set_xlim(-0.5, num_frets + 0.5)
-    ax.set_ylim(-0.5, num_strings - 0.5)
-
-    ax.set_xticks(range(num_frets + 1))
-    ax.set_yticks(range(num_strings))
-
-    ax.set_yticklabels(["E", "A", "D", "G"])
-
-    ax.invert_yaxis()
-
-    ax.set_title("Bass Fretboard Chord Tones")
-
-    plt.tight_layout()
+    fig.update_layout(
+        height=350,
+        width=1000,
+        plot_bgcolor="white",
+        margin=dict(l=20, r=20, t=40, b=20),
+        xaxis=dict(
+            range=[-0.5, 12.5],
+            tickvals=list(range(13)),
+            title="Fret"
+        ),
+        yaxis=dict(
+            range=[3.5, -0.5],
+            tickvals=[0, 1, 2, 3],
+            ticktext=["E", "A", "D", "G"],
+            title="String"
+        )
+    )
 
     return fig
 
@@ -128,7 +152,7 @@ def draw_fretboard(chord_notes, root_note):
 # Streamlit UI
 # =========================
 
-st.set_page_config(page_title="Bass Chord Finder")
+st.set_page_config(page_title="Bass Chord Tone Finder")
 
 st.title("🎸 Bass Chord Tone Finder")
 
@@ -144,9 +168,11 @@ chord_type = st.selectbox(
 
 chord_notes = build_chord(root, chord_type)
 
-st.subheader("Chord Notes")
-st.write(" - ".join(chord_notes))
+st.subheader(f"{root}{chord_type} Chord")
+
+st.write("Chord Notes:")
+st.write(", ".join(chord_notes))
 
 fig = draw_fretboard(chord_notes, root)
 
-st.pyplot(fig)
+st.plotly_chart(fig, use_container_width=True)
