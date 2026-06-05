@@ -1,279 +1,126 @@
 import streamlit as st
+from google import genai
 
-# =========================
 # 페이지 설정
-# =========================
-
 st.set_page_config(
-    page_title="Bass Fretboard",
-    layout="wide"
+    page_title="연애상담 챗봇",
+    page_icon="💖",
 )
 
-# =========================
-# 음악 데이터
-# =========================
+st.title("💖 연애상담 챗봇")
+st.caption("Gemini 2.5 Flash Lite 기반")
 
-NOTES = [
-    "C", "C#", "D", "D#", "E",
-    "F", "F#", "G", "G#", "A", "A#", "B"
-]
+# API 키 확인
+try:
+    api_key = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    st.error("Secrets에 GEMINI_API_KEY가 설정되지 않았습니다.")
+    st.stop()
 
-CHORDS = {
-    "maj": [0, 4, 7],
-    "min": [0, 3, 7],
-    "7": [0, 4, 7, 10],
-    "maj7": [0, 4, 7, 11],
-    "m7": [0, 3, 7, 10]
-}
+# Gemini 클라이언트 생성
+client = genai.Client(api_key=api_key)
 
-# 베이스 튜닝 (아래줄 → 위줄)
-TUNING = ["E", "A", "D", "G"]
+# 세션 상태 초기화
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {
+            "role": "assistant",
+            "content": (
+                "안녕하세요 😊\n\n"
+                "저는 연애상담 챗봇입니다.\n"
+                "썸, 짝사랑, 이별, 재회, 연애 고민 등을 편하게 이야기해 주세요."
+            ),
+        }
+    ]
 
-# =========================
-# 함수
-# =========================
+# 이전 대화 표시
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-def note_index(note):
-    return NOTES.index(note)
+# 사용자 입력
+prompt = st.chat_input("연애 고민을 입력하세요...")
 
+if prompt:
 
-def build_chord(root, chord_type):
-
-    root_idx = note_index(root)
-
-    intervals = CHORDS[chord_type]
-
-    result = []
-
-    for interval in intervals:
-
-        idx = (root_idx + interval) % 12
-
-        result.append(NOTES[idx])
-
-    return result
-
-
-def generate_fretboard(max_fret=12):
-
-    fretboard = []
-
-    for string_note in TUNING:
-
-        row = []
-
-        start_idx = note_index(string_note)
-
-        for fret in range(max_fret + 1):
-
-            note = NOTES[(start_idx + fret) % 12]
-
-            row.append(note)
-
-        fretboard.append(row)
-
-    return fretboard
-
-
-# =========================
-# UI
-# =========================
-
-st.title("🎸 Bass Fretboard Visualizer")
-
-col1, col2 = st.columns(2)
-
-with col1:
-
-    root = st.selectbox(
-        "Root Note",
-        NOTES
+    # 사용자 메시지 저장
+    st.session_state.messages.append(
+        {"role": "user", "content": prompt}
     )
 
-with col2:
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-    chord_type = st.selectbox(
-        "Chord Type",
-        list(CHORDS.keys())
-    )
+    with st.chat_message("assistant"):
+        try:
+            with st.spinner("생각 중..."):
 
-chord_notes = build_chord(root, chord_type)
+                # 대화 기록 생성
+                conversation = ""
 
-st.success(
-    f"Chord Notes: {' • '.join(chord_notes)}"
-)
+                for msg in st.session_state.messages:
+                    role = "사용자" if msg["role"] == "user" else "상담사"
+                    conversation += f"{role}: {msg['content']}\n"
 
-fretboard = generate_fretboard()
+                system_prompt = """
+너는 공감 능력이 뛰어난 연애상담 전문가다.
 
-# =========================
-# CSS 스타일
-# =========================
-
-st.markdown(
-    """
-    <style>
-
-    .fretboard {
-        background: linear-gradient(
-            to bottom,
-            #5c3b1e,
-            #3b2412
-        );
-
-        padding: 40px;
-
-        border-radius: 20px;
-
-        overflow-x: auto;
-
-        border: 4px solid #222;
-    }
-
-    .string-row {
-        display: flex;
-        align-items: center;
-        margin: 26px 0;
-        position: relative;
-    }
-
-    .string-line {
-        position: absolute;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: silver;
-        z-index: 1;
-    }
-
-    .fret {
-        width: 72px;
-        height: 60px;
-
-        border-right: 3px solid #cfcfcf;
-
-        display: flex;
-        justify-content: center;
-        align-items: center;
-
-        position: relative;
-
-        z-index: 2;
-    }
-
-    .note {
-        width: 42px;
-        height: 42px;
-
-        border-radius: 50%;
-
-        display: flex;
-        justify-content: center;
-        align-items: center;
-
-        font-weight: bold;
-
-        color: white;
-
-        background: #3498db;
-
-        box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-
-    .root {
-        background: #e74c3c;
-    }
-
-    .empty {
-        width: 42px;
-        height: 42px;
-    }
-
-    .fret-numbers {
-        display: flex;
-        margin-left: 30px;
-        margin-bottom: 15px;
-        color: white;
-        font-weight: bold;
-    }
-
-    .fret-number {
-        width: 72px;
-        text-align: center;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# =========================
-# 프렛 번호
-# =========================
-
-fret_numbers_html = "<div class='fret-numbers'>"
-
-for fret in range(13):
-
-    fret_numbers_html += (
-        f"<div class='fret-number'>{fret}</div>"
-    )
-
-fret_numbers_html += "</div>"
-
-# =========================
-# 지판 HTML 생성
-# =========================
-
-html = "<div class='fretboard'>"
-
-html += fret_numbers_html
-
-# 화면에는 G현이 위로 오게 reverse
-for string_notes in reversed(fretboard):
-
-    html += "<div class='string-row'>"
-
-    html += "<div class='string-line'></div>"
-
-    for note in string_notes:
-
-        html += "<div class='fret'>"
-
-        if note == root:
-
-            html += (
-                f"<div class='note root'>{note}</div>"
-            )
-
-        elif note in chord_notes:
-
-            html += (
-                f"<div class='note'>{note}</div>"
-            )
-
-        else:
-
-            html += "<div class='empty'></div>"
-
-        html += "</div>"
-
-    html += "</div>"
-
-html += "</div>"
-
-st.markdown(
-    html,
-    unsafe_allow_html=True
-)
-
-# =========================
-# 설명
-# =========================
-
-st.info(
-    """
-🔴 빨간색 = 루트음
-
-🔵 파란색 = 코드톤
+규칙:
+1. 따뜻하고 친절하게 답변한다.
+2. 사용자의 감정을 먼저 공감한다.
+3. 현실적인 조언을 제공한다.
+4. 비난하거나 공격적인 표현을 사용하지 않는다.
+5. 답변은 한국어로 한다.
 """
-)
+
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash-lite",
+                    contents=f"""
+{system_prompt}
+
+다음은 상담 기록이다.
+
+{conversation}
+
+상담사 답변:
+"""
+                )
+
+                answer = response.text
+
+                st.markdown(answer)
+
+                st.session_state.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": answer,
+                    }
+                )
+
+        except Exception as e:
+            error_msg = f"오류가 발생했습니다.\n\n{str(e)}"
+
+            st.error(error_msg)
+
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": "죄송해요. 잠시 후 다시 시도해 주세요.",
+                }
+            )
+
+# 사이드바
+with st.sidebar:
+    st.header("설정")
+
+    if st.button("대화 초기화"):
+        st.session_state.messages = [
+            {
+                "role": "assistant",
+                "content": (
+                    "안녕하세요 😊\n\n"
+                    "연애 고민을 편하게 이야기해 주세요."
+                ),
+            }
+        ]
+        st.rerun()
